@@ -1,0 +1,2 @@
+# modules/auth/ — Agent A (Phase 1) owns this module.
+# Add: auth.router.ts, auth.controller.ts, auth.service.ts, auth.schema.ts

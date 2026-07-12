@@ -1,0 +1,2 @@
+# lib/ — Agent A (Phase 1) fills this directory.
+# Add: prisma.ts (singleton client export), jwt.ts, response helpers, etc.

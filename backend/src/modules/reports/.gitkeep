@@ -1,0 +1,2 @@
+# modules/reports/ — Agent D (Phase 4) owns this module.
+# Add: reports.router.ts, reports.controller.ts, reports.service.ts

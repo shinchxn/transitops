@@ -1,0 +1,2 @@
+# modules/drivers/ — Agent A (Phase 1) owns this module.
+# Add: drivers.router.ts, drivers.controller.ts, drivers.service.ts, drivers.schema.ts

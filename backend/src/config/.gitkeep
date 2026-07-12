@@ -1,0 +1,2 @@
+# config/ — Agent A (Phase 1) fills this directory.
+# Add: db.ts (Prisma client singleton), env.ts (validated env), app.ts (Express factory)

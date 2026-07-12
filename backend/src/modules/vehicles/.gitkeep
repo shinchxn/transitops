@@ -1,0 +1,2 @@
+# modules/vehicles/ — Agent A (Phase 1) owns this module.
+# Add: vehicles.router.ts, vehicles.controller.ts, vehicles.service.ts, vehicles.schema.ts

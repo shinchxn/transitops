@@ -1,0 +1,2 @@
+# modules/fuel/ — Agent C (Phase 3) owns this module.
+# Add: fuel.router.ts, fuel.controller.ts, fuel.service.ts, fuel.schema.ts

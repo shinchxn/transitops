@@ -1,0 +1,2 @@
+# middleware/ — Agent A (Phase 1) fills this directory.
+# Add: authenticate.ts (JWT guard), authorise.ts (role guard), errorHandler.ts, validate.ts (Zod)

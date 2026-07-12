@@ -1,0 +1,5 @@
+/* File: frontend/src/index.css */
+/* Global styles — Agents B/C/D extend this as needed */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

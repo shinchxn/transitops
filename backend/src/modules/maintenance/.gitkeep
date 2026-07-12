@@ -1,0 +1,2 @@
+# modules/maintenance/ — Agent C (Phase 3) owns this module.
+# Add: maintenance.router.ts, maintenance.controller.ts, maintenance.service.ts, maintenance.schema.ts

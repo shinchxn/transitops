@@ -1,0 +1,2 @@
+# modules/trips/ — Agent B (Phase 2) owns this module.
+# Add: trips.router.ts, trips.controller.ts, trips.service.ts, trips.schema.ts

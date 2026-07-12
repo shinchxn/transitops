@@ -1,0 +1,2 @@
+# frontend/src/shared/ — Agent A (Phase 1) fills this directory.
+# Add: api.ts (axios instance), AuthContext.tsx, types.ts (mirrored from backend), hooks/, components/
