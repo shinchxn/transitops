@@ -172,7 +172,10 @@ function useAvailableDrivers(open: boolean) {
       .get<PaginatedResponse<Driver>>("/drivers", {
         params: { status: "AVAILABLE", limit: 100 },
       })
-      .then(({ data }) => setDrivers(data.data))
+      .then(({ data }) => {
+        const now = new Date().toISOString();
+        setDrivers(data.data.filter((d) => d.licenseExpiryDate > now));
+      })
       .catch(console.error);
   }, [open]);
   return drivers;
@@ -458,8 +461,8 @@ function DispatchConfirmModal({ trip, onSuccess, onClose }: DispatchConfirmModal
           </button>
           <button
             onClick={handleConfirm}
-            disabled={loading}
-            className="flex-1 bg-amber-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-amber-600 disabled:opacity-50 transition-colors"
+            disabled={loading || !!error}
+            className="flex-1 bg-amber-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? "Dispatching…" : "Dispatch"}
           </button>
