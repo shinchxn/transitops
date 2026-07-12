@@ -787,7 +787,7 @@ export default function TripsPage() {
   // Socket.IO subscription — patches rows live without polling.
   const socketRef = useRef<Socket | null>(null);
   useEffect(() => {
-    const socket = io("/", { withCredentials: true });
+    const socket = io("http://localhost:4000", { withCredentials: true });
     socketRef.current = socket;
 
     socket.on(

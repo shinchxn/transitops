@@ -18,10 +18,17 @@ interface MaintenanceLog {
   closedAt: string | null;
 }
 
+interface VehicleOption {
+  id: string;
+  registrationNumber: string;
+  name: string;
+}
+
 export default function MaintenancePage() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [logs, setLogs] = useState<MaintenanceLog[]>([]);
+  const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [, setMeta] = useState({ total: 0, page: 1, limit: 20, totalPages: 1 });
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -44,11 +51,25 @@ export default function MaintenancePage() {
     }
   }, [status, page]);
 
-  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+  const fetchVehicles = useCallback(async () => {
+    try {
+      const res = await api.get<PaginatedResponse<VehicleOption>>("/vehicles", {
+        params: { page: 1, limit: 100, sort: "-createdAt" },
+      });
+      setVehicles(res.data.data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLogs();
+    fetchVehicles();
+  }, [fetchLogs, fetchVehicles]);
 
   const socketRef = useRef<Socket | null>(null);
   useEffect(() => {
-    const socket = io("/", { withCredentials: true });
+    const socket = io("http://localhost:4000", { withCredentials: true });
     socketRef.current = socket;
     socket.on(SOCKET_EVENTS.MAINTENANCE_OPENED, (payload: { data: { log: MaintenanceLog } }) => {
       setLogs((prev) => [payload.data.log, ...prev]);
@@ -137,14 +158,18 @@ export default function MaintenancePage() {
       </div>
 
       {modalOpen && (
-        <MaintenanceModal onClose={() => setModalOpen(false)} onSuccess={() => { setModalOpen(false); fetchLogs(); }} />
+        <MaintenanceModal
+          vehicles={vehicles}
+          onClose={() => setModalOpen(false)}
+          onSuccess={() => { setModalOpen(false); fetchLogs(); }}
+        />
       )}
     </div>
   );
 }
 
-function MaintenanceModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
-  const [form, setForm] = useState({ vehicleId: "", description: "", cost: "0" });
+function MaintenanceModal({ vehicles, onClose, onSuccess }: { vehicles: VehicleOption[]; onClose: () => void; onSuccess: () => void }) {
+  const [form, setForm] = useState({ vehicleId: vehicles[0]?.id ?? "", description: "", cost: "0" });
   const [error, setError] = useState<ApiError | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -170,7 +195,19 @@ function MaintenanceModal({ onClose, onSuccess }: { onClose: () => void, onSucce
         <form onSubmit={handleSubmit} className="space-y-4 text-sm">
           <div>
             <label className="block font-medium mb-1">Vehicle ID</label>
-            <input required value={form.vehicleId} onChange={e => setForm({...form, vehicleId: e.target.value})} className="w-full border rounded-lg px-3 py-2" placeholder="uuid" />
+            <select
+              required
+              value={form.vehicleId}
+              onChange={e => setForm({ ...form, vehicleId: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+            >
+              <option value="" disabled>Select a vehicle</option>
+              {vehicles.map((vehicle) => (
+                <option key={vehicle.id} value={vehicle.id}>
+                  {vehicle.registrationNumber} - {vehicle.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block font-medium mb-1">Description</label>

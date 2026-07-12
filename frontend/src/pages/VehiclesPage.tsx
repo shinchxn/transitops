@@ -57,7 +57,7 @@ export default function VehiclesPage() {
   // Socket subscription
   const socketRef = useRef<Socket | null>(null);
   useEffect(() => {
-    const socket = io("/", { withCredentials: true });
+    const socket = io("http://localhost:4000", { withCredentials: true });
     socketRef.current = socket;
     socket.on(SOCKET_EVENTS.VEHICLE_UPDATED, (payload: { event: string; data: { vehicle: Vehicle } }) => {
       setVehicles((prev) => prev.map((v) => (v.id === payload.data.vehicle.id ? payload.data.vehicle : v)));

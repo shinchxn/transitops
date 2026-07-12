@@ -21,12 +21,19 @@ interface Expense {
   notes: string | null;
 }
 
+interface VehicleOption {
+  id: string;
+  registrationNumber: string;
+  name: string;
+}
+
 export default function FuelPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"fuel" | "expenses">("fuel");
   
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState<"fuel" | "expense" | null>(null);
 
@@ -48,6 +55,14 @@ export default function FuelPage() {
   }, [activeTab]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    api.get<PaginatedResponse<VehicleOption>>("/vehicles", {
+      params: { page: 1, limit: 100, sort: "-createdAt" },
+    })
+      .then((res) => setVehicles(res.data.data))
+      .catch((err) => console.error(err));
+  }, []);
 
   const canAddFuel = user?.role === "DRIVER" || user?.role === "FLEET_MANAGER";
   const canAddExpense = user?.role === "FLEET_MANAGER" || user?.role === "FINANCIAL_ANALYST";
@@ -134,14 +149,14 @@ export default function FuelPage() {
         )}
       </div>
 
-      {modalOpen === "fuel" && <FuelModal onClose={() => setModalOpen(null)} onSuccess={() => { setModalOpen(null); fetchData(); }} />}
-      {modalOpen === "expense" && <ExpenseModal onClose={() => setModalOpen(null)} onSuccess={() => { setModalOpen(null); fetchData(); }} />}
+      {modalOpen === "fuel" && <FuelModal vehicles={vehicles} onClose={() => setModalOpen(null)} onSuccess={() => { setModalOpen(null); fetchData(); }} />}
+      {modalOpen === "expense" && <ExpenseModal vehicles={vehicles} onClose={() => setModalOpen(null)} onSuccess={() => { setModalOpen(null); fetchData(); }} />}
     </div>
   );
 }
 
-function FuelModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
-  const [form, setForm] = useState({ vehicleId: "", liters: "", cost: "" });
+function FuelModal({ vehicles, onClose, onSuccess }: { vehicles: VehicleOption[]; onClose: () => void; onSuccess: () => void }) {
+  const [form, setForm] = useState({ vehicleId: vehicles[0]?.id ?? "", liters: "", cost: "" });
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -162,7 +177,15 @@ function FuelModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () 
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <h2 className="text-xl font-bold mb-4">Log Fuel</h2>
         <form onSubmit={handleSubmit} className="space-y-4 text-sm">
-          <div><label className="block mb-1">Vehicle ID</label><input required value={form.vehicleId} onChange={e => setForm({...form, vehicleId: e.target.value})} className="w-full border rounded px-3 py-2" /></div>
+          <div>
+            <label className="block mb-1">Vehicle</label>
+            <select required value={form.vehicleId} onChange={e => setForm({...form, vehicleId: e.target.value})} className="w-full border rounded px-3 py-2">
+              <option value="" disabled>Select a vehicle</option>
+              {vehicles.map((vehicle) => (
+                <option key={vehicle.id} value={vehicle.id}>{vehicle.registrationNumber} - {vehicle.name}</option>
+              ))}
+            </select>
+          </div>
           <div><label className="block mb-1">Liters</label><input type="number" required value={form.liters} onChange={e => setForm({...form, liters: e.target.value})} className="w-full border rounded px-3 py-2" /></div>
           <div><label className="block mb-1">Cost ($)</label><input type="number" required value={form.cost} onChange={e => setForm({...form, cost: e.target.value})} className="w-full border rounded px-3 py-2" /></div>
           <div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onClose} className="px-4 py-2 border rounded">Cancel</button><button type="submit" disabled={submitting} className="px-4 py-2 bg-indigo-600 text-white rounded">Save</button></div>
@@ -172,8 +195,8 @@ function FuelModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () 
   );
 }
 
-function ExpenseModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
-  const [form, setForm] = useState({ vehicleId: "", type: "TOLL", amount: "", notes: "" });
+function ExpenseModal({ vehicles, onClose, onSuccess }: { vehicles: VehicleOption[]; onClose: () => void; onSuccess: () => void }) {
+  const [form, setForm] = useState({ vehicleId: vehicles[0]?.id ?? "", type: "TOLL", amount: "", notes: "" });
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -194,7 +217,15 @@ function ExpenseModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: 
       <div className="bg-white rounded-2xl p-6 w-full max-w-md">
         <h2 className="text-xl font-bold mb-4">Add Expense</h2>
         <form onSubmit={handleSubmit} className="space-y-4 text-sm">
-          <div><label className="block mb-1">Vehicle ID</label><input required value={form.vehicleId} onChange={e => setForm({...form, vehicleId: e.target.value})} className="w-full border rounded px-3 py-2" /></div>
+          <div>
+            <label className="block mb-1">Vehicle</label>
+            <select required value={form.vehicleId} onChange={e => setForm({...form, vehicleId: e.target.value})} className="w-full border rounded px-3 py-2">
+              <option value="" disabled>Select a vehicle</option>
+              {vehicles.map((vehicle) => (
+                <option key={vehicle.id} value={vehicle.id}>{vehicle.registrationNumber} - {vehicle.name}</option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="block mb-1">Type</label>
             <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} className="w-full border rounded px-3 py-2">

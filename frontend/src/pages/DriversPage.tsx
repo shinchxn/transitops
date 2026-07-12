@@ -69,7 +69,7 @@ export default function DriversPage() {
 
   const socketRef = useRef<Socket | null>(null);
   useEffect(() => {
-    const socket = io("/", { withCredentials: true });
+    const socket = io("http://localhost:4000", { withCredentials: true });
     socketRef.current = socket;
     socket.on(SOCKET_EVENTS.DRIVER_UPDATED, (payload: { event: string; data: { driver: Driver } }) => {
       setDrivers((prev) => prev.map((d) => (d.id === payload.data.driver.id ? payload.data.driver : d)));
