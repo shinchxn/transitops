@@ -1,16 +1,20 @@
 // File: backend/src/modules/auth/auth.routes.ts
-// NOTE (flagged deviation): POST /auth/logout is an intentional addition
-// beyond SOLUTION.md's literal route table — a login flow with no logout
-// path isn't a complete deliverable.
 import { Router } from "express";
-import { login, me, logout } from "./auth.controller";
-import { LoginSchema } from "./auth.schema";
-import { validate } from "../../middleware/validate";
 import { requireAuth } from "../../middleware/auth";
-import { asyncHandler } from "../../lib/asyncHandler";
+import { validate } from "../../middleware/validate";
+import { asyncHandler } from "../../middleware/asyncHandler";
+import { LoginSchema } from "./auth.schema";
+import * as controller from "./auth.controller";
 
-export const authRouter = Router();
+const router = Router();
 
-authRouter.post("/login", validate({ body: LoginSchema }), asyncHandler(login));
-authRouter.get("/me", requireAuth, asyncHandler(me));
-authRouter.post("/logout", requireAuth, asyncHandler(logout));
+// POST /api/auth/login — public
+router.post("/login", validate({ body: LoginSchema }), asyncHandler(controller.login));
+
+// GET /api/auth/me — any authenticated user
+router.get("/me", requireAuth, asyncHandler(controller.me));
+
+// POST /api/auth/logout — intentional extension beyond spec; clears cookie
+router.post("/logout", asyncHandler(controller.logout));
+
+export default router;

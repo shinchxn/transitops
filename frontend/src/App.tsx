@@ -4,24 +4,24 @@
 // children of the protected layout route; nobody needs to touch this
 // file to add a page — just add the Route line if you add a brand-new
 // top-level page (rare; most work happens inside existing pages).
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/shared/AuthContext";
-import { RequireAuth } from "@/shared/RequireAuth";
-import { AppShell } from "@/shared/AppShell";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./shared/AuthContext";
+import { RequireAuth } from "./shared/RequireAuth";
+import { AppShell } from "./shared/AppShell";
 
-import LoginPage from "@/pages/LoginPage";
-import DashboardPage from "@/pages/DashboardPage";
-import VehiclesPage from "@/pages/VehiclesPage";
-import DriversPage from "@/pages/DriversPage";
-import TripsPage from "@/pages/TripsPage";
-import MaintenancePage from "@/pages/MaintenancePage";
-import FuelPage from "@/pages/FuelPage";
-import ReportsPage from "@/pages/ReportsPage";
+import LoginPage from "./pages/LoginPage";
+import DashboardPage from "./pages/DashboardPage";
+import VehiclesPage from "./pages/VehiclesPage";
+import DriversPage from "./pages/DriversPage";
+import TripsPage from "./pages/TripsPage";
+import MaintenancePage from "./pages/MaintenancePage";
+import FuelPage from "./pages/FuelPage";
+import ReportsPage from "./pages/ReportsPage";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
+    <AuthProvider>
+      <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
 
@@ -48,8 +48,10 @@ export default function App() {
               }
             />
           </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

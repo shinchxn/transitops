@@ -1,0 +1,22 @@
+[33mcommit 516aec75ea13af8650248521872cc7ebccb69e83[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/agent-a-and-c[m[33m, [m[1;31morigin/feature/agent-c-trips[m[33m, [m[1;31morigin/feature/agent-a-and-c[m[33m, [m[1;32mfeature/agent-c-trips[m[33m)[m
+Author: shinchxn <tamizharasanravi29@gmail.com>
+Date:   Sun Jul 12 10:37:26 2026 +0530
+
+    feat(trips): implement trip management and dispatch (Phase 3)
+
+ SOLUTION.md                                   | 470 [32m+++++++++++++[m
+ backend/prisma/schema.prisma                  | 133 [32m++[m[31m--[m
+ backend/src/index.ts                          |  51 [32m+[m[31m-[m
+ backend/src/lib/AppError.ts                   |  18 [32m+[m
+ backend/src/lib/prisma.ts                     |  23 [32m+[m
+ backend/src/lib/socket.ts                     |  68 [32m++[m
+ backend/src/middleware/asyncHandler.ts        |  17 [32m+[m
+ backend/src/middleware/auth.ts                |  91 [32m+++[m
+ backend/src/middleware/errorHandler.ts        |  39 [32m++[m
+ backend/src/middleware/validate.ts            |  39 [32m++[m
+ backend/src/modules/trips/trips.controller.ts |  46 [32m++[m
+ backend/src/modules/trips/trips.routes.ts     |  79 [32m+++[m
+ backend/src/modules/trips/trips.schema.ts     |  36 [32m+[m
+ backend/src/modules/trips/trips.service.ts    | 379 [32m++++++++++[m
+ frontend/src/pages/TripsPage.tsx              | 948 [32m+++++++++++++++++++++++++[m[31m-[m
+ 15 files changed, 2353 insertions(+), 84 deletions(-)

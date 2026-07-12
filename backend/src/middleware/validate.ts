@@ -1,26 +1,39 @@
 // File: backend/src/middleware/validate.ts
-// Accepting separate schemas per request part (body/query/params) instead
-// of one big schema lets query-string values (which arrive as strings)
-// use z.coerce.number()/z.coerce.date() cleanly without contaminating the
-// body schema's types.
-import { RequestHandler } from "express";
-import { ZodSchema } from "zod";
+// Zod validation middleware — validates req.body, req.query, and/or req.params
+// against a schema before the request reaches any controller.
 
-interface ValidationSchemas {
+import type { Request, Response, NextFunction } from "express";
+import type { ZodSchema } from "zod";
+
+interface ValidateTargets {
   body?: ZodSchema;
   query?: ZodSchema;
   params?: ZodSchema;
 }
 
-export const validate =
-  (schemas: ValidationSchemas): RequestHandler =>
-  (req, res, next) => {
+/**
+ * Usage in routes:
+ *   router.post("/", validate({ body: CreateTripSchema }), asyncHandler(create))
+ *   router.get("/",  validate({ query: TripQuerySchema }), asyncHandler(list))
+ *
+ * On failure, ZodError is thrown and caught by the central errorHandler which
+ * returns a 400 with field-level error details.
+ */
+export function validate(targets: ValidateTargets) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     try {
-      if (schemas.body) req.body = schemas.body.parse(req.body);
-      if (schemas.query) req.query = schemas.query.parse(req.query) as any;
-      if (schemas.params) req.params = schemas.params.parse(req.params) as any;
+      if (targets.body) {
+        req.body = targets.body.parse(req.body) as unknown;
+      }
+      if (targets.query) {
+        req.query = targets.query.parse(req.query) as Record<string, string>;
+      }
+      if (targets.params) {
+        req.params = targets.params.parse(req.params) as Record<string, string>;
+      }
       next();
     } catch (err) {
-      next(err); // ZodError is caught by errorHandler and formatted there
+      next(err); // ZodError → errorHandler → 400 JSON
     }
   };
+}

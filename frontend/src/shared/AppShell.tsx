@@ -1,20 +1,9 @@
 // File: frontend/src/shared/AppShell.tsx
-import React from "react";
-import { Link, useLocation, Navigate } from "react-router-dom";
+import { Link, useLocation, Outlet } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "./AuthContext";
 
-export function RequireAuth({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
-  const { user, loading } = useAuth();
-  if (loading) return <div className="p-8">Loading session...</div>;
-  if (!user) return <Navigate to="/login" replace />;
-  if (roles && !roles.includes(user.role)) {
-    return <div className="p-8 text-red-600">Access Denied: Your role ({user.role}) is not authorised for this page.</div>;
-  }
-  return <>{children}</>;
-}
-
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell() {
   const { user, logout } = useAuth();
   const location = useLocation();
 
@@ -29,8 +18,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <nav className="bg-navy-900 border-b border-navy-600 px-6 py-4 flex flex-wrap gap-6 text-sm font-medium text-gray-300 items-center sticky top-0 z-40 shadow-lg shadow-black/20">
+    <div className="min-h-screen bg-navy-950 flex flex-col">
+      <nav className="bg-navy-900 border-b border-navy-700 px-6 py-4 flex flex-wrap gap-6 text-sm font-medium text-gray-300 items-center sticky top-0 z-40 shadow-lg shadow-black/20">
         <div className="font-extrabold text-lg mr-4 tracking-tight">
           <span className="text-white">Transit</span>
           <span className="text-brand-400">Ops</span>
@@ -71,7 +60,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
           >
-            {children}
+            <Outlet />
           </motion.div>
         </AnimatePresence>
       </main>

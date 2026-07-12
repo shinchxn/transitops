@@ -1,17 +1,23 @@
 // File: backend/src/lib/prisma.ts
-// Singleton so every module reuses one connection pool instead of
-// instantiating PrismaClient per-request, which exhausts DB connections
-// under load — standard pattern for Node + Prisma with hot reload in dev.
+// Singleton Prisma client — shared across all modules.
+// Agent A owns this file; this stub exists so Agent C compiles before Agent A merges.
+
 import { PrismaClient } from "@prisma/client";
 
-const globalForPrisma = global as unknown as { prisma?: PrismaClient };
+declare global {
+  // eslint-disable-next-line no-var
+  var __prisma: PrismaClient | undefined;
+}
 
-export const prisma =
-  globalForPrisma.prisma ??
+export const prisma: PrismaClient =
+  global.__prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+    log:
+      process.env["NODE_ENV"] === "development"
+        ? ["query", "warn", "error"]
+        : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+if (process.env["NODE_ENV"] !== "production") {
+  global.__prisma = prisma;
 }

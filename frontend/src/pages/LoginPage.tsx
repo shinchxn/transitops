@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { api, ApiError } from "../shared/api";
 import { useAuth, User } from "../shared/AuthContext";
-import GlowCard from "../shared/GlowCard";
 import axios from "axios";
 
 export default function LoginPage() {
@@ -40,9 +39,9 @@ export default function LoginPage() {
       {/* Ambient background */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(24,54,168,0.35),_transparent_60%)]" />
-        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-brand-600/20 blur-3xl animate-drift" />
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-brand-600/20 blur-3xl animate-pulse" />
         <div
-          className="absolute bottom-0 right-0 w-[28rem] h-[28rem] rounded-full bg-brand-500/10 blur-3xl animate-drift"
+          className="absolute bottom-0 right-0 w-[28rem] h-[28rem] rounded-full bg-brand-500/10 blur-3xl animate-pulse"
           style={{ animationDelay: "3s" }}
         />
         <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] bg-[size:48px_48px]" />
@@ -67,7 +66,7 @@ export default function LoginPage() {
           <p className="mt-2 text-sm text-gray-400">Fleet Management. Digitized.</p>
         </motion.div>
 
-        <GlowCard className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-2xl shadow-black/40">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-2xl shadow-black/40">
           <div className="p-8">
             <h2 className="text-center text-xl font-semibold text-white">Sign in to your account</h2>
             <p className="mt-1 text-center text-sm text-gray-400">Enter your credentials to continue</p>
@@ -120,7 +119,7 @@ export default function LoginPage() {
               </motion.button>
             </form>
           </div>
-        </GlowCard>
+        </div>
       </motion.div>
     </div>
   );

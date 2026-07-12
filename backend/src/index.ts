@@ -1,44 +1,58 @@
 // File: backend/src/index.ts
-// Entry point. Agents B/C/D: import your router (e.g. `vehiclesRouter`)
-// and mount it below with `app.use("/api/vehicles", vehiclesRouter)`,
-// following the auth router's pattern. Do not add routes directly here —
-// mount your module's own router.
-import express from "express";
+// Server entry point.
+// Integrates all 4 agents' modules together in a single API.
+
+import "dotenv/config";
 import http from "http";
+import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
-import { env } from "./config/env";
-import { errorHandler } from "./middleware/errorHandler";
 import { initSocket } from "./lib/socket";
-import { authRouter } from "./modules/auth/auth.routes";
+import { errorHandler } from "./middleware/errorHandler";
+
+import authRouter from "./modules/auth/auth.routes";
+import vehiclesRouter from "./modules/vehicles/vehicles.routes";
+import driversRouter from "./modules/drivers/drivers.routes";
+import tripsRouter from "./modules/trips/trips.routes";
+import maintenanceRouter from "./modules/maintenance/maintenance.routes";
+import fuelRouter from "./modules/fuel/fuel.routes";
+import reportsRouter from "./modules/reports/reports.routes";
 
 const app = express();
+const PORT = Number(process.env["PORT"] ?? 4000);
+const FRONTEND_ORIGIN = process.env["FRONTEND_ORIGIN"] ?? "http://localhost:5173";
 
-app.use(cors({ origin: env.FRONTEND_ORIGIN, credentials: true }));
-app.use(cookieParser());
+// ─── Global middleware ────────────────────────────────────────────────────────
+app.use(cors({ origin: FRONTEND_ORIGIN, credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 
-app.get("/api/health", (req, res) => res.status(200).json({ ok: true }));
+// ─── Routes (All Agents Integrated) ───────────────────────────────────────────
+app.use("/api/auth", authRouter);                   // Agent A
+app.use("/api/vehicles", vehiclesRouter);           // Agent B
+app.use("/api/drivers", driversRouter);             // Agent B
+app.use("/api/trips", tripsRouter);                 // Agent C
+app.use("/api/maintenance", maintenanceRouter);     // Agent D
+app.use("/api", fuelRouter); // registers /fuel-logs and /expenses // Agent D
+app.use("/api/reports", reportsRouter);             // Agent D
 
-app.use("/api/auth", authRouter);
+// Health check — useful for load balancers and quick smoke tests.
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
 
-// Agents B/C/D mount their routers here, e.g.:
-// app.use("/api/vehicles", vehiclesRouter);
-// app.use("/api/drivers", driversRouter);
-// app.use("/api/trips", tripsRouter);
-// app.use("/api/maintenance", maintenanceRouter);
-// app.use("/api/fuel-logs", fuelRouter);
-// app.use("/api/expenses", expensesRouter);
-// app.use("/api/reports", reportsRouter);
-
-// Error handler must be the LAST app.use() — Express only treats a
-// 4-arg middleware function as an error handler if it's registered last.
+// ─── Error handler (must be last) ─────────────────────────────────────────────
 app.use(errorHandler);
 
-const httpServer = http.createServer(app);
-initSocket(httpServer);
+// ─── Start server ─────────────────────────────────────────────────────────────
+const server = http.createServer(app);
 
-httpServer.listen(env.PORT, () => {
-  console.log(`TransitOps backend listening on http://localhost:${env.PORT}`);
+// Initialise Socket.IO — must happen before any route emits events.
+initSocket(server, FRONTEND_ORIGIN);
+
+server.listen(PORT, () => {
+  console.log(`TransitOps backend listening on http://localhost:${PORT}`);
 });
+
+export { app, server };
