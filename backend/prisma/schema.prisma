@@ -60,21 +60,20 @@ model User {
   role         Role
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-
-  driver Driver?
 }
 
 model Vehicle {
-  id               String        @id @default(cuid())
-  plateNumber      String        @unique
-  make             String
-  model            String
-  year             Int
-  capacityTons     Float
-  status           VehicleStatus @default(AVAILABLE)
-  currentOdometer  Float         @default(0)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id                   String        @id @default(cuid())
+  registrationNumber   String        @unique
+  name                 String
+  type                 String
+  maxLoadCapacityKg    Float
+  acquisitionCost      Float
+  region               String?
+  odometerKm           Float         @default(0)
+  status               VehicleStatus @default(AVAILABLE)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
   trips        Trip[]
   maintenances Maintenance[]
@@ -82,15 +81,17 @@ model Vehicle {
 }
 
 model Driver {
-  id             String       @id @default(cuid())
-  userId         String       @unique
-  licenseNumber  String       @unique
-  licenseExpiry  DateTime
-  status         DriverStatus @default(AVAILABLE)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id                 String       @id @default(cuid())
+  name               String
+  licenseNumber      String       @unique
+  licenseCategory    String
+  licenseExpiryDate  DateTime
+  contactNumber      String
+  safetyScore        Int          @default(100)
+  status             DriverStatus @default(AVAILABLE)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
-  user  User   @relation(fields: [userId], references: [id])
   trips Trip[]
 }
 
