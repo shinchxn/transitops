@@ -1,7 +1,6 @@
 // File: backend/src/index.ts
 // Server entry point.
-// Agent A owns the full bootstrap; this file is extended here by Agent C
-// to wire the trips router so the module runs in isolation for testing.
+// Integrates all 4 agents' modules together in a single API.
 
 import "dotenv/config";
 import http from "http";
@@ -11,7 +10,14 @@ import cookieParser from "cookie-parser";
 
 import { initSocket } from "./lib/socket";
 import { errorHandler } from "./middleware/errorHandler";
+
+import authRouter from "./modules/auth/auth.routes";
+import vehiclesRouter from "./modules/vehicles/vehicles.routes";
+import driversRouter from "./modules/drivers/drivers.routes";
 import tripsRouter from "./modules/trips/trips.routes";
+import maintenanceRouter from "./modules/maintenance/maintenance.routes";
+import fuelRouter from "./modules/fuel/fuel.routes";
+import reportsRouter from "./modules/reports/reports.routes";
 
 const app = express();
 const PORT = Number(process.env["PORT"] ?? 4000);
@@ -22,10 +28,14 @@ app.use(cors({ origin: FRONTEND_ORIGIN, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
-// Agent A will register auth, vehicles, drivers, maintenance, fuel, reports here.
-// Agent C registers trips:
-app.use("/api/trips", tripsRouter);
+// ─── Routes (All Agents Integrated) ───────────────────────────────────────────
+app.use("/api/auth", authRouter);                   // Agent A
+app.use("/api/vehicles", vehiclesRouter);           // Agent B
+app.use("/api/drivers", driversRouter);             // Agent B
+app.use("/api/trips", tripsRouter);                 // Agent C
+app.use("/api/maintenance", maintenanceRouter);     // Agent D
+app.use("/api", fuelRouter); // registers /fuel-logs and /expenses // Agent D
+app.use("/api/reports", reportsRouter);             // Agent D
 
 // Health check — useful for load balancers and quick smoke tests.
 app.get("/health", (_req, res) => {
