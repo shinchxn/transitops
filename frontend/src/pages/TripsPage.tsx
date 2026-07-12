@@ -97,6 +97,18 @@ function errorIcon(code: string): string {
   return "❌";
 }
 
+// These error codes represent hard business rule violations that make
+// dispatch structurally impossible. The Dispatch button is disabled
+// the moment any of these appear — the user cannot override them from the UI.
+const BLOCKING_DISPATCH_CODES = new Set([
+  "DRIVER_LICENSE_EXPIRED",
+  "DRIVER_UNAVAILABLE",
+  "DRIVER_SUSPENDED",
+  "VEHICLE_UNAVAILABLE",
+  "VEHICLE_RETIRED",
+  "CARGO_OVERWEIGHT",
+]);
+
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
 const api = axios.create({
@@ -170,12 +182,19 @@ function useAvailableDrivers(open: boolean) {
     if (!open) return;
     api
       .get<PaginatedResponse<Driver>>("/drivers", {
+        // Fetch AVAILABLE drivers; we also filter expired licenses client-side below.
         params: { status: "AVAILABLE", limit: 100 },
       })
       .then(({ data }) => setDrivers(data.data))
       .catch(console.error);
   }, [open]);
-  return drivers;
+  // Filter: exclude any driver whose license has already expired.
+  // This is the upstream prevention layer — an expired-license driver
+  // simply never appears as a selectable option in the New Trip form.
+  const eligibleDrivers = drivers.filter(
+    (d) => new Date(d.licenseExpiryDate) >= new Date()
+  );
+  return { drivers, eligibleDrivers };
 }
 
 // ─── CreateTripForm ───────────────────────────────────────────────────────────
@@ -187,7 +206,7 @@ interface CreateTripFormProps {
 
 function CreateTripForm({ onCreated, onClose }: CreateTripFormProps) {
   const vehicles = useAvailableVehicles(true);
-  const drivers = useAvailableDrivers(true);
+  const { eligibleDrivers } = useAvailableDrivers(true);
 
   const [form, setForm] = useState({
     source: "",
@@ -357,7 +376,7 @@ function CreateTripForm({ onCreated, onClose }: CreateTripFormProps) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Driver{" "}
-              <span className="text-gray-400 font-normal">(available only)</span>
+              <span className="text-gray-400 font-normal">(available, valid license only)</span>
             </label>
             <select
               name="driverId"
@@ -367,12 +386,18 @@ function CreateTripForm({ onCreated, onClose }: CreateTripFormProps) {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">Select driver…</option>
-              {drivers.map((d) => (
+              {eligibleDrivers.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.name} — License {d.licenseNumber}
+                  {d.name} — License {d.licenseNumber} (exp{" "}
+                  {new Date(d.licenseExpiryDate).toLocaleDateString()})
                 </option>
               ))}
             </select>
+            {eligibleDrivers.length === 0 && (
+              <p className="mt-1 text-xs text-amber-600 font-medium">
+                ⚠️ No eligible drivers available. All available drivers have expired licenses.
+              </p>
+            )}
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -407,11 +432,60 @@ interface DispatchConfirmModalProps {
 
 function DispatchConfirmModal({ trip, onSuccess, onClose }: DispatchConfirmModalProps) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<ApiError | null>(null);
+
+  // Two separate error slots:
+  // - blockingError: detected on modal open via pre-validation. Hard-blocks the button.
+  // - transientError: returned from the actual PATCH call if the pre-check passes
+  //   but something changes between open and confirm (e.g. another user dispatches
+  //   the same vehicle first). Does NOT hard-block — user can try again or cancel.
+  const [blockingError, setBlockingError] = useState<ApiError | null>(null);
+  const [transientError, setTransientError] = useState<ApiError | null>(null);
+
+  // Pre-validation: fetch the driver and check license + status on modal open.
+  // This catches expired licenses and suspended drivers BEFORE the user clicks Dispatch.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function preValidate() {
+      try {
+        const { data: driver } = await api.get<Driver>(`/drivers/${trip.driverId}`);
+        if (cancelled) return;
+
+        if (driver.status === "SUSPENDED") {
+          setBlockingError({
+            error: "DRIVER_SUSPENDED",
+            message: `${driver.name} is currently SUSPENDED and cannot be assigned to a trip.`,
+          });
+          return;
+        }
+
+        if (new Date(driver.licenseExpiryDate) < new Date()) {
+          setBlockingError({
+            error: "DRIVER_LICENSE_EXPIRED",
+            message: `${driver.name}'s license expired on ${new Date(driver.licenseExpiryDate).toLocaleDateString()}. Renew the license before dispatching.`,
+          });
+          return;
+        }
+      } catch {
+        // If the pre-validation fetch itself fails (e.g. network error),
+        // don't hard-block — let the server make the final call.
+      }
+    }
+
+    void preValidate();
+    return () => { cancelled = true; };
+  }, [trip.driverId]);
+
+  // Whether the button should be fully disabled.
+  // A blocking error makes dispatch structurally impossible from the UI.
+  const isBlocked = !!(blockingError && BLOCKING_DISPATCH_CODES.has(blockingError.error));
 
   async function handleConfirm() {
+    // Action guard: refuse to call the API if we already know it will fail.
+    if (isBlocked) return;
+
     setLoading(true);
-    setError(null);
+    setTransientError(null);
     try {
       const { data } = await api.patch<{ trip: Trip; vehicle: Vehicle; driver: Driver }>(
         `/trips/${trip.id}/dispatch`
@@ -419,12 +493,22 @@ function DispatchConfirmModal({ trip, onSuccess, onClose }: DispatchConfirmModal
       onSuccess(data);
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        setError(err.response?.data as ApiError);
+        const apiErr = err.response?.data as ApiError;
+        // If the server returns a blocking code (race condition between pre-check
+        // and actual dispatch), escalate it to a blockingError so the button stays locked.
+        if (BLOCKING_DISPATCH_CODES.has(apiErr?.error)) {
+          setBlockingError(apiErr);
+        } else {
+          setTransientError(apiErr);
+        }
       }
     } finally {
       setLoading(false);
     }
   }
+
+  // Display the blocking error if present; otherwise show any transient error.
+  const displayedError = blockingError ?? transientError;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -438,13 +522,23 @@ function DispatchConfirmModal({ trip, onSuccess, onClose }: DispatchConfirmModal
           ? This will set the vehicle and driver to <em>On Trip</em>.
         </p>
 
-        {error && (
-          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-            <span className="text-base">{errorIcon(error.error)}</span>
+        {displayedError && (
+          <div
+            className={`flex items-start gap-2 rounded-lg p-3 text-sm border ${
+              isBlocked
+                ? "bg-red-50 border-red-300 text-red-700"
+                : "bg-amber-50 border-amber-200 text-amber-800"
+            }`}
+          >
+            <span className="text-base flex-shrink-0">{errorIcon(displayedError.error)}</span>
             <div>
-              <p className="font-medium">{error.error.replace(/_/g, " ")}</p>
-              {/* Server message rendered verbatim — not paraphrased */}
-              <p className="mt-0.5">{error.message}</p>
+              <p className="font-semibold">{displayedError.error.replace(/_/g, " ")}</p>
+              <p className="mt-0.5">{displayedError.message}</p>
+              {isBlocked && (
+                <p className="mt-1.5 text-xs font-medium opacity-80">
+                  This trip cannot be dispatched until the issue above is resolved.
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -458,10 +552,14 @@ function DispatchConfirmModal({ trip, onSuccess, onClose }: DispatchConfirmModal
           </button>
           <button
             onClick={handleConfirm}
-            disabled={loading}
-            className="flex-1 bg-amber-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-amber-600 disabled:opacity-50 transition-colors"
+            disabled={loading || isBlocked}
+            title={isBlocked ? "Resolve the issue above before dispatching" : undefined}
+            className="flex-1 bg-amber-500 text-white rounded-lg py-2 text-sm font-medium
+              hover:bg-amber-600
+              disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-amber-500
+              transition-colors"
           >
-            {loading ? "Dispatching…" : "Dispatch"}
+            {loading ? "Dispatching…" : isBlocked ? "Cannot Dispatch" : "Dispatch"}
           </button>
         </div>
       </div>
