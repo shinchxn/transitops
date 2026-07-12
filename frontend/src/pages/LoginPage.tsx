@@ -1,97 +1,127 @@
 // File: frontend/src/pages/LoginPage.tsx
-import { FormEvent, useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/shared/AuthContext";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { api, ApiError } from "../shared/api";
+import { useAuth, User } from "../shared/AuthContext";
+import GlowCard from "../shared/GlowCard";
+import axios from "axios";
 
 export default function LoginPage() {
-  const { user, loading, login, error } = useAuth();
-  const location = useLocation();
+  const [email, setEmail] = useState("manager@transitops.com");
+  const [password, setPassword] = useState("password123");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fieldError, setFieldError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  const redirectTo = new URLSearchParams(location.search).get("redirect") ?? "/dashboard";
-
-  // Already logged in — don't show the login form again.
-  if (!loading && user) {
-    return <Navigate to={redirectTo} replace />;
-  }
-
-  async function handleSubmit(e: FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    setFieldError(null);
-
-    // Client-side check before the network round trip — server still
-    // validates independently via LoginSchema.
-    if (!email || !EMAIL_RE.test(email)) {
-      setFieldError("Enter a valid email address.");
-      return;
-    }
-    if (!password) {
-      setFieldError("Password is required.");
-      return;
-    }
-
-    setSubmitting(true);
+    setLoading(true);
+    setError("");
     try {
-      await login(email, password);
-      navigate(redirectTo, { replace: true });
-    } catch {
-      // `error` from useAuth already holds the server message.
+      const res = await api.post<{ token: string; user: User }>("/auth/login", { email, password });
+      login(res.data.user);
+      navigate("/");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
+        const d = err.response.data as ApiError;
+        setError(d.message || "Failed to log in.");
+      } else {
+        setError("An unexpected error occurred.");
+      }
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
-      <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <h1 className="mb-1 text-xl font-semibold text-gray-900 dark:text-gray-100">🚛 TransitOps</h1>
-        <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">Sign in to your fleet dashboard</p>
-
-        {(fieldError || error) && (
-          <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
-            {fieldError ?? error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-              placeholder="manager@transitops.dev"
-              autoComplete="email"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-              placeholder="••••••••"
-              autoComplete="current-password"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {submitting ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-navy-950 py-12 px-4 sm:px-6 lg:px-8">
+      {/* Ambient background */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(24,54,168,0.35),_transparent_60%)]" />
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-brand-600/20 blur-3xl animate-drift" />
+        <div
+          className="absolute bottom-0 right-0 w-[28rem] h-[28rem] rounded-full bg-brand-500/10 blur-3xl animate-drift"
+          style={{ animationDelay: "3s" }}
+        />
+        <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] bg-[size:48px_48px]" />
       </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 w-full max-w-md"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+          className="text-center mb-8"
+        >
+          <div className="text-4xl font-extrabold tracking-tight">
+            <span className="text-white">Transit</span>
+            <span className="text-brand-400">Ops</span>
+          </div>
+          <p className="mt-2 text-sm text-gray-400">Fleet Management. Digitized.</p>
+        </motion.div>
+
+        <GlowCard className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-2xl shadow-black/40">
+          <div className="p-8">
+            <h2 className="text-center text-xl font-semibold text-white">Sign in to your account</h2>
+            <p className="mt-1 text-center text-sm text-gray-400">Enter your credentials to continue</p>
+
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="mt-5 bg-red-500/10 text-red-300 text-sm p-3 rounded-lg border border-red-500/30"
+              >
+                {error}
+              </motion.div>
+            )}
+
+            <form className="mt-6 space-y-4" onSubmit={handleLogin}>
+              <div>
+                <label className="sr-only">Email address</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-500/30"
+                  placeholder="Email address"
+                />
+              </div>
+              <div>
+                <label className="sr-only">Password</label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-500/30"
+                  placeholder="Password"
+                />
+              </div>
+
+              <motion.button
+                type="submit"
+                disabled={loading}
+                whileHover={{ scale: loading ? 1 : 1.015 }}
+                whileTap={{ scale: loading ? 1 : 0.985 }}
+                className="relative w-full flex justify-center items-center gap-2 py-2.5 px-4 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-400 shadow-lg shadow-brand-500/20 disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden"
+              >
+                {loading && (
+                  <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                )}
+                {loading ? "Signing in..." : "Sign in"}
+              </motion.button>
+            </form>
+          </div>
+        </GlowCard>
+      </motion.div>
     </div>
   );
 }
