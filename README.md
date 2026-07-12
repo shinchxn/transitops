@@ -2,8 +2,6 @@
 
 > A centralized platform to digitize vehicle, driver, dispatch, maintenance, and expense management for logistics operations — built in an 8-hour hackathon.
 
-[Mockup Reference (Excalidraw)](https://app.excalidraw.com/l/65VNwvy7c4X/1FHGDNgD2td)
-
 ---
 
 ## 📌 Table of Contents
